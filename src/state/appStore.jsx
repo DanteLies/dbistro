@@ -61,6 +61,8 @@ function defaultDailyLog() {
     lunchLogs: {},
     wasteLogs: [],
     boardOrders: [],
+    announcement: { text: '', at: '', by: '' },
+    tasks: [],
   }
 }
 
@@ -127,6 +129,12 @@ function isEmptyDailyLog(log) {
 
   const boardOrders = Array.isArray(log.boardOrders) ? log.boardOrders : []
   if (boardOrders.length > 0) return false
+
+  const announcement = log.announcement && typeof log.announcement === 'object' ? log.announcement : {}
+  if (String(announcement.text || '').trim()) return false
+
+  const tasks = Array.isArray(log.tasks) ? log.tasks : []
+  if (tasks.length > 0) return false
 
   return true
 }
@@ -332,6 +340,69 @@ function reducer(state, action) {
       const dateKey = typeof action.dateKey === 'string' ? action.dateKey : getTodayKey()
       const next = ensureLog({ ...state, activeDateKey: dateKey }, dateKey)
       return next
+    }
+    case 'board/setAnnouncement': {
+      if (!action.isAdmin) return state
+      const text = String(action.text || '').trim()
+      const by = String(action.by || '').trim()
+      return withActiveLog(state, (log) => {
+        return {
+          ...log,
+          announcement: { text, at: new Date().toISOString(), by },
+        }
+      })
+    }
+    case 'tasks/add': {
+      if (!action.isAdmin) return state
+      const text = String(action.text || '').trim()
+      if (!text) return state
+      const by = String(action.by || '').trim()
+      const entry = {
+        id: crypto.randomUUID(),
+        text,
+        done: false,
+        createdAt: new Date().toISOString(),
+        createdBy: by,
+        doneAt: '',
+        doneBy: '',
+      }
+      return withActiveLog(state, (log) => {
+        const prev = Array.isArray(log.tasks) ? log.tasks : []
+        return {
+          ...log,
+          tasks: [entry, ...prev],
+        }
+      })
+    }
+    case 'tasks/toggle': {
+      const id = String(action.id || '').trim()
+      if (!id) return state
+      const by = String(action.by || '').trim()
+      return withActiveLog(state, (log) => {
+        const prev = Array.isArray(log.tasks) ? log.tasks : []
+        if (prev.length === 0) return log
+        const next = prev.map((t) => {
+          if (!t || t.id !== id) return t
+          const done = !Boolean(t.done)
+          return {
+            ...t,
+            done,
+            doneAt: done ? new Date().toISOString() : '',
+            doneBy: done ? by : '',
+          }
+        })
+        return { ...log, tasks: next }
+      })
+    }
+    case 'tasks/delete': {
+      if (!action.isAdmin) return state
+      const id = String(action.id || '').trim()
+      if (!id) return state
+      return withActiveLog(state, (log) => {
+        const prev = Array.isArray(log.tasks) ? log.tasks : []
+        if (prev.length === 0) return log
+        return { ...log, tasks: prev.filter((t) => t && t.id !== id) }
+      })
     }
     case 'dough/newBatch': {
       return withActiveLog(state, (log) => {
@@ -1077,6 +1148,23 @@ export function AppStoreProvider({ children }) {
         },
         setActiveDay: (dateKey) => dispatch({ type: 'day/setActive', dateKey }),
         resetDay: (dateKey) => dispatch({ type: 'logs/resetForDay', dateKey }),
+        setAnnouncement: (text) =>
+          dispatch({
+            type: 'board/setAnnouncement',
+            text,
+            by: state.session.email || '',
+            isAdmin: state.session.isAdmin,
+          }),
+        addTask: (text) =>
+          dispatch({
+            type: 'tasks/add',
+            text,
+            by: state.session.email || '',
+            isAdmin: state.session.isAdmin,
+          }),
+        toggleTask: (id) => dispatch({ type: 'tasks/toggle', id, by: state.session.email || '' }),
+        deleteTask: (id) =>
+          dispatch({ type: 'tasks/delete', id, isAdmin: state.session.isAdmin }),
         newDoughBatch: () => dispatch({ type: 'dough/newBatch', email: state.session.email || '' }),
         discardDough: ({ quantity = 1, note = '' } = {}) =>
           dispatch({ type: 'dough/discard', quantity, note }),

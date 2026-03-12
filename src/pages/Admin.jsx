@@ -117,6 +117,10 @@ export default function Admin() {
   const [imageSrcByPath, setImageSrcByPath] = useState({})
   const [wasteVisible, setWasteVisible] = useState(10)
   const [boardVisible, setBoardVisible] = useState(10)
+  const [feedbackEntries, setFeedbackEntries] = useState([])
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackError, setFeedbackError] = useState('')
+  const [feedbackRefresh, setFeedbackRefresh] = useState(0)
 
   const pizzasTotal = useMemo(() => {
     return Object.values(activeLog.pizzaSales).reduce((sum, v) => sum + v, 0)
@@ -215,6 +219,44 @@ export default function Admin() {
       cancelled = true
     }
   }, [filteredWasteEntries, wasteVisible])
+
+  useEffect(() => {
+    if (view !== 'Predlogi') return
+    let cancelled = false
+    setFeedbackError('')
+    setFeedbackLoading(true)
+    if (!isSupabaseConfigured || !supabase) {
+      setFeedbackError('Supabase ni nastavljen.')
+      setFeedbackEntries([])
+      setFeedbackLoading(false)
+      return
+    }
+    supabase
+      .from('feedback_requests')
+      .select('id, created_at, created_by_display, to_user, message')
+      .order('created_at', { ascending: false })
+      .limit(200)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          setFeedbackError(error.message || 'Napaka pri nalaganju.')
+          setFeedbackEntries([])
+          setFeedbackLoading(false)
+          return
+        }
+        setFeedbackEntries(Array.isArray(data) ? data : [])
+        setFeedbackLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFeedbackError('Napaka pri nalaganju.')
+        setFeedbackEntries([])
+        setFeedbackLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [view, feedbackRefresh])
 
   const salesPizza = useMemo(() => {
     return Object.entries(activeLog.pizzaSales || {})
@@ -623,7 +665,7 @@ export default function Admin() {
 
       <div className="mt-4">
         <div className="flex flex-wrap gap-2">
-          {['Kave in malice', 'Odpisi', 'Prodaja', 'Količine', 'Odprti računi'].map((v) => (
+          {['Kave in malice', 'Odpisi', 'Prodaja', 'Količine', 'Odprti računi', 'Predlogi'].map((v) => (
             <SegButton key={v} label={v} active={view === v} onClick={() => setView(v)} />
           ))}
         </div>
@@ -896,6 +938,59 @@ export default function Admin() {
               ))}
             </div>
           </Card>
+        </div>
+      ) : null}
+
+      {view === 'Predlogi' ? (
+        <div className="mt-4 space-y-3">
+          <Card className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-extrabold tracking-tight text-neutral-900">
+                  Predlogi za izboljšave
+                </div>
+                <div className="mt-1 text-xs font-semibold text-neutral-500">
+                  {feedbackLoading ? 'Nalagam…' : `Skupaj: ${feedbackEntries.length}`}
+                </div>
+              </div>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setFeedbackRefresh((n) => n + 1)}
+                className="h-10 rounded-2xl bg-white/95 px-4 text-xs font-extrabold text-neutral-900 shadow-lg shadow-neutral-900/5 ring-1 ring-neutral-200"
+              >
+                Osveži
+              </motion.button>
+            </div>
+            {feedbackError ? (
+              <div className="mt-3 text-sm font-semibold text-rose-700">{feedbackError}</div>
+            ) : null}
+          </Card>
+
+          {feedbackEntries.length === 0 && !feedbackLoading ? (
+            <Card className="p-4">
+              <div className="text-sm font-semibold text-neutral-500">Ni predlogov.</div>
+            </Card>
+          ) : (
+            feedbackEntries.map((f) => (
+              <Card key={f.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-extrabold text-neutral-900">
+                      {String(f.created_by_display || '').trim() || 'zaposleni'}
+                    </div>
+                    <div className="mt-0.5 text-xs font-semibold text-neutral-500">
+                      {formatDateTime(f.created_at)}
+                      {String(f.to_user || '').trim() ? ` • za ${String(f.to_user).trim()}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 whitespace-pre-wrap rounded-2xl bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800 ring-1 ring-neutral-200">
+                  {String(f.message || '')}
+                </div>
+              </Card>
+            ))
+          )}
         </div>
       ) : null}
     </PageLayout>

@@ -44,6 +44,8 @@ export default function Dashboard() {
   const cards = useMemo(() => {
     const base = [
       { icon: '🍕', label: 'Pizza', to: '/pizza', accent: 'amber' },
+      { icon: '📌', label: 'Oglasna deska', to: '/board', accent: 'amber' },
+      { icon: '💡', label: 'Predlogi', to: '/feedback', accent: 'sky' },
       { icon: '🥔', label: 'Krompir', to: '/potato', accent: 'sky' },
       { icon: '🍰', label: 'Tortice', to: '/cakes', accent: 'rose' },
       { icon: '☕', label: 'Kava', to: '/coffee', accent: 'amber' },

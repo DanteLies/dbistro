@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Admin from './pages/Admin.jsx'
+import Board from './pages/Board.jsx'
 import Cakes from './pages/Cakes.jsx'
 import Coffee from './pages/Coffee.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import DejanOrders from './pages/DejanOrders.jsx'
+import Feedback from './pages/Feedback.jsx'
 import Login from './pages/Login.jsx'
 import Lunch from './pages/Lunch.jsx'
 import Pizza from './pages/Pizza.jsx'
@@ -144,6 +146,26 @@ function AnimatedRoutes() {
             <RequireAuth>
               <Page>
                 <DejanOrders />
+              </Page>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/board"
+          element={
+            <RequireAuth>
+              <Page>
+                <Board />
+              </Page>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <RequireAuth>
+              <Page>
+                <Feedback />
               </Page>
             </RequireAuth>
           }

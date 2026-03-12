@@ -13,8 +13,8 @@ export default function PageLayout({
   const { session, actions } = useAppStore()
 
   return (
-    <div className="min-h-full bg-neutral-100">
-      <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
+    <div className="min-h-dvh bg-neutral-100 md:px-6 md:py-6">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:min-h-0 md:max-w-3xl">
         <div className="sticky top-0 z-40 bg-neutral-100/80 px-3 pb-2 pt-3 backdrop-blur">
           <div className="flex items-center gap-2">
             {showBack ? (
